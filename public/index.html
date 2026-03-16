@@ -169,6 +169,31 @@
   .team-name { font-size: 13px; font-weight: 700; }
   .team-role { font-size: 11px; color: var(--gray-500); }
   .team-metric { font-size: 18px; font-weight: 800; color: var(--blue); text-align: right; }
+
+  /* ── Pie Chart (Classify Transactions) ── */
+  .pie-container { display: flex; align-items: center; gap: 20px; margin-top: 16px; }
+  .pie-chart-wrapper { position: relative; width: 130px; height: 130px; flex-shrink: 0; }
+  .pie-chart-wrapper canvas { width: 130px; height: 130px; }
+  .pie-center {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    text-align: center;
+  }
+  .pie-center .pie-total { font-size: 24px; font-weight: 800; color: var(--navy); line-height: 1; }
+  .pie-center .pie-label { font-size: 9px; color: var(--gray-500); text-transform: uppercase; letter-spacing: .4px; }
+  .pie-legend { display: flex; flex-direction: column; gap: 6px; }
+  .pie-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .pie-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .pie-legend-val { font-weight: 700; min-width: 18px; }
+
+  /* ── Mini Bar Chart (Monthly Close) ── */
+  .mini-bar-chart { display: flex; align-items: flex-end; gap: 3px; height: 100px; margin-top: 16px; }
+  .mini-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; height: 100%; justify-content: flex-end; }
+  .mini-bar { width: 100%; border-radius: 2px 2px 0 0; min-height: 1px; transition: all .3s; }
+  .mini-bar-val { font-size: 8px; font-weight: 700; color: var(--navy); }
+  .mini-bar-label { font-size: 7.5px; color: var(--gray-400); font-weight: 600; white-space: nowrap; }
+  .mini-bar-legend { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+  .mini-bar-legend span { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--gray-500); }
+  .mini-bar-legend .dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 </style>
 </head>
 <body>
@@ -223,22 +248,31 @@
         <div class="overview-card" onclick="showPage('classify')" style="border-left-color:var(--blue)">
           <h3>Classify Transactions</h3>
           <p>Track bi-weekly transaction categorization compliance across all clients.</p>
-          <div class="card-stats">
-            <div class="cs"><div class="cs-val" style="color:var(--green)">15</div><div class="cs-label">On Track</div></div>
-            <div class="cs"><div class="cs-val" style="color:var(--yellow)">5</div><div class="cs-label">Due Soon</div></div>
-            <div class="cs"><div class="cs-val" style="color:var(--orange)">3</div><div class="cs-label">Urgent</div></div>
-            <div class="cs"><div class="cs-val" style="color:var(--red)">2</div><div class="cs-label">Overdue</div></div>
+          <div class="pie-container">
+            <div class="pie-chart-wrapper">
+              <canvas id="classifyPie" width="130" height="130"></canvas>
+              <div class="pie-center">
+                <div class="pie-total">25</div>
+                <div class="pie-label">Clients</div>
+              </div>
+            </div>
+            <div class="pie-legend">
+              <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#22c55e"></span><span class="pie-legend-val">15</span> On Track</div>
+              <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#eab308"></span><span class="pie-legend-val">5</span> Due Soon</div>
+              <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#f97316"></span><span class="pie-legend-val">3</span> Urgent</div>
+              <div class="pie-legend-item"><span class="pie-legend-dot" style="background:#ef4444"></span><span class="pie-legend-val">2</span> Overdue</div>
+            </div>
           </div>
         </div>
 
         <div class="overview-card" onclick="showPage('monthly-close')" style="border-left-color:var(--purple)">
           <h3>Monthly Close</h3>
           <p>Monitor month-end close progress and staff allocations across the firm.</p>
-          <div class="card-stats">
-            <div class="cs"><div class="cs-val" style="color:var(--green)">14</div><div class="cs-label">Current</div></div>
-            <div class="cs"><div class="cs-val" style="color:var(--yellow)">22</div><div class="cs-label">1 Behind</div></div>
-            <div class="cs"><div class="cs-val" style="color:var(--red)">28</div><div class="cs-label">2+ Behind</div></div>
-            <div class="cs"><div class="cs-val" style="color:var(--blue)">72</div><div class="cs-label">Avg Score</div></div>
+          <div class="mini-bar-chart" id="overviewBarChart"></div>
+          <div class="mini-bar-legend">
+            <span><span class="dot" style="background:#22c55e"></span> Current</span>
+            <span><span class="dot" style="background:#eab308"></span> 1 Behind</span>
+            <span><span class="dot" style="background:#ef4444"></span> 2+ Behind</span>
           </div>
         </div>
 
@@ -341,6 +375,78 @@ function renderTeamGrid() {
   `).join('');
 }
 renderTeamGrid();
+renderClassifyPie();
+renderOverviewBarChart();
+
+// ── Pie Chart: Classify Transactions ──
+function renderClassifyPie() {
+  const canvas = document.getElementById('classifyPie');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const data = [
+    { value: 15, color: '#22c55e' },  // On Track
+    { value: 5,  color: '#eab308' },  // Due Soon
+    { value: 3,  color: '#f97316' },  // Urgent
+    { value: 2,  color: '#ef4444' },  // Overdue
+  ];
+  const total = data.reduce((s, d) => s + d.value, 0);
+  const cx = 65, cy = 65, outerR = 60, innerR = 40;
+  let startAngle = -Math.PI / 2;
+
+  data.forEach(d => {
+    const sliceAngle = (d.value / total) * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, startAngle, startAngle + sliceAngle);
+    ctx.arc(cx, cy, innerR, startAngle + sliceAngle, startAngle, true);
+    ctx.closePath();
+    ctx.fillStyle = d.color;
+    ctx.fill();
+    startAngle += sliceAngle;
+  });
+}
+
+// ── Mini Bar Chart: Monthly Close ──
+function renderOverviewBarChart() {
+  const container = document.getElementById('overviewBarChart');
+  if (!container) return;
+
+  const TARGET = '2026-02';
+  const MONTHS = [
+    '2024-12','2025-01','2025-02','2025-03','2025-04','2025-05','2025-06',
+    '2025-07','2025-08','2025-09','2025-10','2025-11','2025-12',
+    '2026-01','2026-02'
+  ];
+  // Mock distribution matching the monthly close dashboard data
+  const counts = {
+    '2024-12':1,'2025-01':0,'2025-02':0,'2025-03':1,'2025-04':0,'2025-05':0,
+    '2025-06':3,'2025-07':2,'2025-08':1,'2025-09':2,'2025-10':2,'2025-11':5,
+    '2025-12':11,'2026-01':22,'2026-02':14
+  };
+  const maxCount = Math.max(...Object.values(counts), 1);
+  const names = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function barCol(ym) {
+    const ti = MONTHS.indexOf(TARGET);
+    const ci = MONTHS.indexOf(ym);
+    if (ci >= ti) return '#22c55e';
+    if (ci === ti - 1) return '#eab308';
+    return '#ef4444';
+  }
+
+  let html = '';
+  MONTHS.forEach(m => {
+    const c = counts[m] || 0;
+    const pct = (c / maxCount) * 100;
+    const [y, mo] = m.split('-');
+    const label = names[parseInt(mo)] + "'" + y.slice(2);
+    html += `<div class="mini-bar-col">
+      ${c > 0 ? '<div class="mini-bar-val">' + c + '</div>' : ''}
+      <div class="mini-bar" style="height:${Math.max(pct, c > 0 ? 4 : 0)}%;background:${barCol(m)};"></div>
+      <div class="mini-bar-label">${label}</div>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
 
 // ══════════════════════════════════════════════════════════════
 //  AI ASSISTANT — Mock Response Engine
