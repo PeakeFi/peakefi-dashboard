@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PeakeFi — Monthly Close Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: #f4f6fa; color: #000b20; line-height: 1.5;
+  }
+  :root {
+    --blue: #4463bb; --blue-light: #5a7ad4; --blue-bg: #eef2fb;
+    --navy: #000b20; --white: #ffffff;
+    --green: #22c55e; --green-bg: #ecfdf5; --green-dark: #16a34a;
+    --yellow: #eab308; --yellow-bg: #fefce8; --yellow-dark: #a16207;
+    --orange: #f97316; --orange-bg: #fff7ed; --orange-dark: #c2410c;
+    --red: #ef4444; --red-bg: #fef2f2; --red-dark: #dc2626;
+    --purple: #8b5cf6; --purple-bg: #f5f3ff;
+    --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb;
+    --gray-300: #d1d5db; --gray-400: #9ca3af; --gray-500: #6b7280;
+    --gray-600: #4b5563; --gray-700: #374151;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,11,32,.08), 0 1px 2px rgba(0,11,32,.06);
+    --shadow-md: 0 4px 6px -1px rgba(0,11,32,.08), 0 2px 4px -1px rgba(0,11,32,.04);
+  }
+  .app { max-width: 1380px; margin: 0 auto; padding: 24px 28px 48px; }
+
+  /* Header */
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .header-left h1 { font-size: 26px; font-weight: 700; color: var(--navy); }
+  .header-left p { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .brand-line { height: 3px; background: linear-gradient(90deg, var(--blue), var(--navy)); border-radius: 2px; margin-bottom: 24px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: none; cursor: pointer; transition: all .15s;
+  }
+  .btn-primary { background: var(--blue); color: var(--white); }
+  .btn-primary:hover { background: var(--blue-light); }
+  .btn-outline { background: var(--white); color: var(--navy); border: 1px solid var(--gray-200); }
+  .btn-outline:hover { background: var(--gray-50); }
+  .last-sync { font-size: 12px; color: var(--gray-400); }
+
+  /* Grid layout */
+  .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .full-width { grid-column: 1 / -1; }
+  .card {
+    background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px;
+  }
+  .card-title { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .card-subtitle { font-size: 12px; color: var(--gray-500); margin-bottom: 18px; }
+
+  /* Stats row */
+  .stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--white); border-radius: var(--radius); padding: 18px 20px;
+    box-shadow: var(--shadow); text-align: center; border-top: 3px solid transparent;
+  }
+  .stat-card .number { font-size: 32px; font-weight: 800; line-height: 1.1; }
+  .stat-card .label { font-size: 11px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
+
+  /* Bar chart */
+  .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 200px; padding-top: 10px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+  .bar {
+    width: 100%; border-radius: 4px 4px 0 0; transition: all .3s; cursor: pointer; position: relative; min-height: 2px;
+  }
+  .bar:hover { opacity: .85; }
+  .bar-label { font-size: 10px; color: var(--gray-500); font-weight: 600; text-align: center; white-space: nowrap; }
+  .bar-value {
+    font-size: 11px; font-weight: 700; color: var(--navy); text-align: center;
+  }
+  .bar-target { width: 100%; border-top: 2px dashed var(--gray-300); position: absolute; left: 0; }
+
+  /* Staff allocation */
+  .staff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  .staff-card {
+    background: var(--gray-50); border-radius: 8px; padding: 16px; border: 1px solid var(--gray-200);
+    transition: all .15s; cursor: pointer;
+  }
+  .staff-card:hover { border-color: var(--blue); box-shadow: var(--shadow-md); }
+  .staff-card.active { border-color: var(--blue); background: var(--blue-bg); }
+  .staff-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--white); flex-shrink: 0;
+  }
+  .staff-name { font-size: 14px; font-weight: 700; color: var(--navy); }
+  .staff-role { font-size: 11px; color: var(--gray-500); }
+  .staff-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .staff-stat { text-align: center; }
+  .staff-stat-value { font-size: 20px; font-weight: 800; line-height: 1.2; }
+  .staff-stat-label { font-size: 10px; color: var(--gray-500); font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }
+  .score-bar-container { grid-column: 1 / -1; margin-top: 4px; }
+  .score-bar-track { height: 6px; background: var(--gray-200); border-radius: 3px; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+  .score-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--gray-500); margin-top: 2px; }
+
+  /* Filters */
+  .filters { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .search-box {
+    flex: 0 1 240px; padding: 9px 14px; border: 1px solid var(--gray-200);
+    border-radius: 8px; font-size: 13px; outline: none; transition: border .15s;
+  }
+  .search-box:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(68,99,187,.12); }
+  .filter-select {
+    padding: 9px 14px; border: 1px solid var(--gray-200); border-radius: 8px;
+    font-size: 13px; background: var(--white); outline: none; cursor: pointer; min-width: 160px;
+  }
+  .filter-select:focus { border-color: var(--blue); }
+  .filter-group { display: flex; gap: 6px; margin-left: auto; }
+  .filter-chip {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--gray-200); background: var(--white); cursor: pointer; transition: all .15s;
+  }
+  .filter-chip:hover { border-color: var(--blue); color: var(--blue); }
+  .filter-chip.active { background: var(--blue); color: var(--white); border-color: var(--blue); }
+
+  /* Table */
+  .table-container { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--navy); }
+  th {
+    text-align: left; padding: 13px 16px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .6px; color: rgba(255,255,255,.85);
+    cursor: pointer; user-select: none;
+  }
+  th:hover { color: var(--white); }
+  td { padding: 13px 16px; font-size: 13.5px; border-bottom: 1px solid var(--gray-100); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--gray-50); }
+  .table-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px; border-top: 1px solid var(--gray-100); font-size: 12px; color: var(--gray-500);
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .badge-current { background: var(--green-bg); color: var(--green-dark); }
+  .badge-current .dot { background: var(--green); }
+  .badge-one-behind { background: var(--yellow-bg); color: var(--yellow-dark); }
+  .badge-one-behind .dot { background: var(--yellow); }
+  .badge-behind { background: var(--red-bg); color: var(--red-dark); }
+  .badge-behind .dot { background: var(--red); }
+
+  /* Close progress mini bar */
+  .close-progress { display: flex; align-items: center; gap: 8px; }
+  .close-pct { font-size: 12px; font-weight: 700; min-width: 36px; }
+  .close-bar-track { flex: 1; height: 6px; background: var(--gray-200); border-radius: 3px; overflow: hidden; }
+  .close-bar-fill { height: 100%; border-radius: 3px; }
+
+  /* Month label colors in the bar chart */
+  .month-current { background: var(--green); }
+  .month-one { background: var(--yellow); }
+  .month-behind { background: var(--red); }
+  .month-way-behind { background: #991b1b; }
+  .month-future { background: var(--blue); }
+
+  .assignee { display: flex; align-items: center; gap: 8px; }
+
+  @media (max-width: 1000px) {
+    .dashboard-grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Monthly Close Tracker</h1>
+      <p>Track month-end close progress and staff allocations across the firm</p>
+    </div>
+    <div class="header-right">
+      <span class="last-sync" id="lastSync">Last synced: —</span>
+      <button class="btn btn-outline" onclick="exportCSV()">⬇ Export</button>
+      <button class="btn btn-primary" onclick="syncFromDouble()">⟳ Sync from Double</button>
+    </div>
+  </div>
+  <div class="brand-line"></div>
+
+  <!-- Stats -->
+  <div class="stats" id="statsRow"></div>
+
+  <!-- Charts Row -->
+  <div class="dashboard-grid">
+
+    <!-- Close Distribution Bar Chart -->
+    <div class="card">
+      <div class="card-title">Close Distribution</div>
+      <div class="card-subtitle">Latest published financials by month — target: all clients through Feb 2026</div>
+      <div class="bar-chart" id="barChart"></div>
+      <div style="display:flex;align-items:center;gap:16px;margin-top:14px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray-500);">
+          <span style="width:10px;height:10px;border-radius:2px;background:var(--green);display:inline-block;"></span> Current (Feb 2026)
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray-500);">
+          <span style="width:10px;height:10px;border-radius:2px;background:var(--yellow);display:inline-block;"></span> 1 Month Behind
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray-500);">
+          <span style="width:10px;height:10px;border-radius:2px;background:var(--red);display:inline-block;"></span> 2+ Months Behind
+        </div>
+      </div>
+    </div>
+
+    <!-- Staff Allocation -->
+    <div class="card">
+      <div class="card-title">Staff Allocation</div>
+      <div class="card-subtitle">Client distribution and average ICP score by team member — click to filter table</div>
+      <div class="staff-grid" id="staffGrid"></div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <input type="text" class="search-box" id="searchBox" placeholder="Search clients..." oninput="applyFilters()">
+    <select class="filter-select" id="preparerFilter" onchange="applyFilters()">
+      <option value="">All Preparers</option>
+    </select>
+    <select class="filter-select" id="reviewerFilter" onchange="applyFilters()">
+      <option value="">All Reviewers</option>
+    </select>
+    <div class="filter-group">
+      <button class="filter-chip active" data-filter="all" onclick="setStatusFilter(this)">All</button>
+      <button class="filter-chip" data-filter="current" onclick="setStatusFilter(this)">Current</button>
+      <button class="filter-chip" data-filter="one-behind" onclick="setStatusFilter(this)">1 Behind</button>
+      <button class="filter-chip" data-filter="behind" onclick="setStatusFilter(this)">2+ Behind</button>
+    </div>
+  </div>
+
+  <!-- Client Table -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('client')">Client Name ↕</th>
+          <th onclick="sortBy('preparer')">Preparer ↕</th>
+          <th onclick="sortBy('reviewer')">Reviewer ↕</th>
+          <th onclick="sortBy('latestMonth')">Latest Published ↕</th>
+          <th onclick="sortBy('closeProgress')">Close Progress ↕</th>
+          <th onclick="sortBy('score')">ICP Score ↕</th>
+          <th onclick="sortBy('status')">Status ↕</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="table-footer">
+      <span id="rowCount">Showing 0 of 0 clients</span>
+      <span>Target: All clients current through Feb 2026</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Helpers ──
+const AVATAR_COLORS = ['#4463bb','#2d8659','#9333ea','#dc6b20','#0891b2','#be123c','#4f46e5','#059669'];
+function avatarColor(name) {
+  let h = 0; for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+function initials(name) { return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2); }
+
+// Current target month: Feb 2026 (since we're in March 2026)
+const TARGET_MONTH = '2026-02';
+const MONTHS_ORDER = [
+  '2024-12','2025-01','2025-02','2025-03','2025-04','2025-05','2025-06',
+  '2025-07','2025-08','2025-09','2025-10','2025-11','2025-12',
+  '2026-01','2026-02'
+];
+
+function monthLabel(ym) {
+  const [y, m] = ym.split('-');
+  const names = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return names[parseInt(m)] + ' ' + y.slice(2);
+}
+
+function monthsFromTarget(ym) {
+  const ti = MONTHS_ORDER.indexOf(TARGET_MONTH);
+  const ci = MONTHS_ORDER.indexOf(ym);
+  if (ci === -1) return -99; // very behind
+  return ci - ti; // 0 = current, -1 = one behind, -2+ = behind
+}
+
+function getCloseStatus(latestMonth) {
+  const diff = monthsFromTarget(latestMonth);
+  if (diff >= 0) return { key: 'current', label: 'Current', badgeClass: 'badge-current' };
+  if (diff === -1) return { key: 'one-behind', label: '1 Behind', badgeClass: 'badge-one-behind' };
+  return { key: 'behind', label: Math.abs(diff) + ' Behind', badgeClass: 'badge-behind' };
+}
+
+function barColor(ym) {
+  const diff = monthsFromTarget(ym);
+  if (diff >= 0) return 'var(--green)';
+  if (diff === -1) return 'var(--yellow)';
+  return 'var(--red)';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MOCK DATA — Cameron: Replace with Double API response
+//  Key field: latestMonth = "Latest Published Financials" from Double
+//  closeProgress = Close Progress % from Double
+//  score = ICP Score from the Scoring Tool
+// ══════════════════════════════════════════════════════════════
+const MOCK_DATA = [
+  { client: "Adamax, LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-09", closeProgress: 4, score: 78 },
+  { client: "AG Investment Partners dba The Comfy Nomad", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 9, score: 65 },
+  { client: "AGD Property Holdings LLC", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2025-09", closeProgress: 39, score: 72 },
+  { client: "Agile Properties", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 10, score: 68 },
+  { client: "Ajay & Pooja Short-term Rentals", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 0, score: 96 },
+  { client: "Alyson Gordon - Short term Rentals", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2025-10", closeProgress: 0, score: 71 },
+  { client: "Andi Reynolds", preparer: "Charlie Reynolds", reviewer: "Charlie Reynolds", latestMonth: "2026-02", closeProgress: 100, score: 100 },
+  { client: "Apke Investments LLC", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2025-08", closeProgress: 0, score: 62 },
+  { client: "Ardent Holdings Denver, LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 9, score: 74 },
+  { client: "Bar Crawl USA", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 12, score: 58 },
+  { client: "Big Jay's Landscaping", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 10, score: 55 },
+  { client: "Biofuse Hydration PLLC", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2025-11", closeProgress: 6, score: 60 },
+  { client: "Biofuse Wellness PLLC", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2025-07", closeProgress: 0, score: 52 },
+  { client: "Black Rock Construction, Inc", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2024-12", closeProgress: 0, score: 48 },
+  { client: "Bone Collective Studio, Inc", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 85 },
+  { client: "BZ Properties", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 11, score: 63 },
+  { client: "Carenostics Inc", preparer: "Charlie Reynolds", reviewer: "Linh Guy", latestMonth: "2025-11", closeProgress: 85, score: 88 },
+  { client: "Chad Rockwell LTR", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2025-06", closeProgress: 0, score: 45 },
+  { client: "CM Global Properties LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-06", closeProgress: 72, score: 70 },
+  { client: "Collin Hart Rentals", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 12, score: 59 },
+  { client: "CRE Creative, LLC", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2026-02", closeProgress: 100, score: 82 },
+  { client: "CRS Management", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 13, score: 97 },
+  { client: "Della Investments II LLC", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 15, score: 66 },
+  { client: "Duame Big, LLC", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2025-03", closeProgress: 9, score: 50 },
+  { client: "Ecommerce Now LLC", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2025-12", closeProgress: 100, score: 76 },
+  { client: "Emerald St Holdings, LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 12, score: 73 },
+  { client: "Enlighten Technologies Inc.", preparer: "Charlie Reynolds", reviewer: "Linh Guy", latestMonth: "2026-02", closeProgress: 91, score: 92 },
+  { client: "ERE Healthcare Advisors", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 80 },
+  { client: "Finding Dory, LLC", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2025-06", closeProgress: 0, score: 42 },
+  { client: "Flynn RE Broker, LLC", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 0, score: 57 },
+  { client: "FootHill Legacy Holdings, LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 78 },
+  { client: "Freedom to Rise Realty LLC", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2025-11", closeProgress: 90, score: 69 },
+  { client: "Greeview Trading", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 15, score: 64 },
+  { client: "Horizon STR Portfolio", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 20, score: 75 },
+  { client: "Hunt Properties, LLC", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2025-12", closeProgress: 8, score: 61 },
+  { client: "Jesse Dix Insurance and Financial Services", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 25, score: 67 },
+  { client: "Jordan Street Homes, LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 95 },
+  { client: "Kassy Slaughter - John West Property", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 18, score: 56 },
+  { client: "L.B Capital Investments LLC", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 30, score: 71 },
+  { client: "Lakewood Properties", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 22, score: 77 },
+  { client: "Land Investing Online, LLC", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 15, score: 54 },
+  { client: "Land Portal, LLC", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 18, score: 53 },
+  { client: "Lauren Rockwell Real Estate, LLC", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2025-11", closeProgress: 5, score: 46 },
+  { client: "Maverick Property Holdings, LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-10", closeProgress: 8, score: 60 },
+  { client: "Morales Investment Group", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2026-02", closeProgress: 100, score: 83 },
+  { client: "Nolan & Associates", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 35, score: 79 },
+  { client: "PeakeFi, LLC", preparer: "Charlie Reynolds", reviewer: "Linh Guy", latestMonth: "2026-02", closeProgress: 100, score: 95 },
+  { client: "PFP Holdings", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-02", closeProgress: 100, score: 97 },
+  { client: "Pier Relaxation NewCo", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 0, score: 51 },
+  { client: "Pine Creek Holdings", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2026-02", closeProgress: 100, score: 81 },
+  { client: "Price Pictures Address, LLC", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2025-12", closeProgress: 20, score: 58 },
+  { client: "Redwood Analytics Inc", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 40, score: 74 },
+  { client: "Rivera Family Trust", preparer: "Charlie Reynolds", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 87 },
+  { client: "Savannah Tadin Aesthetics", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2025-11", closeProgress: 5, score: 63 },
+  { client: "Sawgrass Development LLC", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 28, score: 72 },
+  { client: "Stead Holdings, LLC", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 12, score: 55 },
+  { client: "Sterling Financial Group", preparer: "Charlie Reynolds", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 90 },
+  { client: "Suite Dreams, LLC", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2025-07", closeProgress: 0, score: 40 },
+  { client: "Summit Real Estate Mgmt", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 32, score: 70 },
+  { client: "Tech Bird Consultants LLC.", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 96 },
+  { client: "The Bone Family - Rental Real Estate", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 28, score: 95 },
+  { client: "Westbrook Capital LLC", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 25, score: 68 },
+  { client: "Willis Rockwell Vacations, LLC", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2025-11", closeProgress: 10, score: 49 },
+  { client: "WK Dev LLC", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2025-12", closeProgress: 14, score: 52 },
+];
+
+// ── State ──
+let filteredData = [...MOCK_DATA];
+let currentStatusFilter = 'all';
+let currentSort = { key: 'latestMonth', dir: 'asc' };
+let selectedStaff = null;
+
+// ── Init ──
+function init() {
+  populateFilterDropdowns();
+  applyFilters();
+  renderBarChart();
+  renderStaffGrid();
+  document.getElementById('lastSync').textContent = 'Last synced: ' + new Date().toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+}
+
+function populateFilterDropdowns() {
+  const preparers = [...new Set(MOCK_DATA.map(d => d.preparer))].sort();
+  const reviewers = [...new Set(MOCK_DATA.map(d => d.reviewer))].sort();
+  const pSel = document.getElementById('preparerFilter');
+  const rSel = document.getElementById('reviewerFilter');
+  preparers.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; pSel.appendChild(o); });
+  reviewers.forEach(r => { const o = document.createElement('option'); o.value = r; o.textContent = r; rSel.appendChild(o); });
+}
+
+// ── Stats ──
+function renderStats() {
+  const all = MOCK_DATA;
+  const current = all.filter(d => getCloseStatus(d.latestMonth).key === 'current').length;
+  const oneBehind = all.filter(d => getCloseStatus(d.latestMonth).key === 'one-behind').length;
+  const behind = all.filter(d => getCloseStatus(d.latestMonth).key === 'behind').length;
+  const avgScore = Math.round(all.reduce((s, d) => s + d.score, 0) / all.length);
+  const avgProgress = Math.round(all.reduce((s, d) => s + d.closeProgress, 0) / all.length);
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card" style="border-top-color:var(--blue)"><div class="number" style="color:var(--blue)">${all.length}</div><div class="label">Total Clients</div></div>
+    <div class="stat-card" style="border-top-color:var(--green)"><div class="number" style="color:var(--green)">${current}</div><div class="label">Current</div></div>
+    <div class="stat-card" style="border-top-color:var(--yellow)"><div class="number" style="color:var(--yellow)">${oneBehind}</div><div class="label">1 Month Behind</div></div>
+    <div class="stat-card" style="border-top-color:var(--red)"><div class="number" style="color:var(--red)">${behind}</div><div class="label">2+ Behind</div></div>
+    <div class="stat-card" style="border-top-color:var(--purple)"><div class="number" style="color:var(--purple)">${avgScore}</div><div class="label">Avg ICP Score</div></div>
+    <div class="stat-card" style="border-top-color:var(--blue)"><div class="number" style="color:var(--blue)">${avgProgress}%</div><div class="label">Avg Close Progress</div></div>
+  `;
+}
+
+// ── Bar Chart ──
+function renderBarChart() {
+  // Count clients per month
+  const counts = {};
+  MONTHS_ORDER.forEach(m => counts[m] = 0);
+  MOCK_DATA.forEach(d => {
+    if (counts[d.latestMonth] !== undefined) counts[d.latestMonth]++;
+    else {
+      // Earlier than our range
+      if (!counts['earlier']) counts['earlier'] = 0;
+      counts['earlier']++;
+    }
+  });
+
+  const maxCount = Math.max(...Object.values(counts), 1);
+  const container = document.getElementById('barChart');
+
+  let html = '';
+  MONTHS_ORDER.forEach(m => {
+    const c = counts[m];
+    const pct = (c / maxCount) * 100;
+    const color = barColor(m);
+    html += `
+      <div class="bar-col">
+        <div class="bar-value">${c || ''}</div>
+        <div class="bar" style="height:${Math.max(pct, c > 0 ? 4 : 0)}%;background:${color};" title="${monthLabel(m)}: ${c} clients"></div>
+        <div class="bar-label">${monthLabel(m)}</div>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+// ── Staff Grid ──
+function renderStaffGrid() {
+  const staffMap = {};
+  MOCK_DATA.forEach(d => {
+    if (!staffMap[d.preparer]) staffMap[d.preparer] = { clients: [], role: 'Preparer' };
+    staffMap[d.preparer].clients.push(d);
+  });
+
+  // Also count reviewer assignments
+  const reviewerCounts = {};
+  MOCK_DATA.forEach(d => { reviewerCounts[d.reviewer] = (reviewerCounts[d.reviewer] || 0) + 1; });
+
+  const container = document.getElementById('staffGrid');
+  let html = '';
+
+  Object.keys(staffMap).sort().forEach(name => {
+    const s = staffMap[name];
+    const clientCount = s.clients.length;
+    const avgScore = Math.round(s.clients.reduce((sum, c) => sum + c.score, 0) / clientCount);
+    const currentCount = s.clients.filter(c => getCloseStatus(c.latestMonth).key === 'current').length;
+    const currentPct = Math.round((currentCount / clientCount) * 100);
+    const isActive = selectedStaff === name;
+
+    // Score color
+    let scoreColor = 'var(--red)';
+    if (avgScore >= 80) scoreColor = 'var(--green)';
+    else if (avgScore >= 65) scoreColor = 'var(--yellow)';
+    else if (avgScore >= 50) scoreColor = 'var(--orange)';
+
+    html += `
+      <div class="staff-card ${isActive ? 'active' : ''}" onclick="filterByStaff('${name}')">
+        <div class="staff-header">
+          <div class="avatar" style="background:${avatarColor(name)}">${initials(name)}</div>
+          <div>
+            <div class="staff-name">${name}</div>
+            <div class="staff-role">Preparer${reviewerCounts[name] ? ' · ' + reviewerCounts[name] + ' reviews' : ''}</div>
+          </div>
+        </div>
+        <div class="staff-stats">
+          <div class="staff-stat">
+            <div class="staff-stat-value" style="color:var(--navy)">${clientCount}</div>
+            <div class="staff-stat-label">Clients</div>
+          </div>
+          <div class="staff-stat">
+            <div class="staff-stat-value" style="color:${scoreColor}">${avgScore}</div>
+            <div class="staff-stat-label">Avg Score</div>
+          </div>
+          <div class="score-bar-container">
+            <div class="score-bar-track">
+              <div class="score-bar-fill" style="width:${currentPct}%;background:var(--green)"></div>
+            </div>
+            <div class="score-label">
+              <span>${currentCount} current</span>
+              <span>${currentPct}% up to date</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function filterByStaff(name) {
+  if (selectedStaff === name) {
+    selectedStaff = null;
+    document.getElementById('preparerFilter').value = '';
+  } else {
+    selectedStaff = name;
+    document.getElementById('preparerFilter').value = name;
+  }
+  applyFilters();
+  renderStaffGrid();
+}
+
+// ── Filters ──
+function setStatusFilter(el) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  currentStatusFilter = el.dataset.filter;
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  const prep = document.getElementById('preparerFilter').value;
+  const rev = document.getElementById('reviewerFilter').value;
+
+  filteredData = MOCK_DATA.filter(d => {
+    if (q && !d.client.toLowerCase().includes(q)) return false;
+    if (prep && d.preparer !== prep) return false;
+    if (rev && d.reviewer !== rev) return false;
+    if (currentStatusFilter !== 'all' && getCloseStatus(d.latestMonth).key !== currentStatusFilter) return false;
+    return true;
+  });
+
+  sortData();
+  renderStats();
+  renderTable();
+}
+
+function sortBy(key) {
+  if (currentSort.key === key) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+  else { currentSort.key = key; currentSort.dir = 'asc'; }
+  sortData();
+  renderTable();
+}
+
+function sortData() {
+  filteredData.sort((a, b) => {
+    let va, vb;
+    switch (currentSort.key) {
+      case 'client': va = a.client.toLowerCase(); vb = b.client.toLowerCase(); break;
+      case 'preparer': va = a.preparer; vb = b.preparer; break;
+      case 'reviewer': va = a.reviewer; vb = b.reviewer; break;
+      case 'latestMonth': va = a.latestMonth; vb = b.latestMonth; break;
+      case 'closeProgress': va = a.closeProgress; vb = b.closeProgress; break;
+      case 'score': va = a.score; vb = b.score; break;
+      case 'status': va = monthsFromTarget(a.latestMonth); vb = monthsFromTarget(b.latestMonth); break;
+      default: va = a.client; vb = b.client;
+    }
+    if (va < vb) return currentSort.dir === 'asc' ? -1 : 1;
+    if (va > vb) return currentSort.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+}
+
+// ── Table ──
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  if (filteredData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--gray-400)">No clients match your filters.</td></tr>';
+    document.getElementById('rowCount').textContent = 'Showing 0 of ' + MOCK_DATA.length + ' clients';
+    return;
+  }
+
+  tbody.innerHTML = filteredData.map(d => {
+    const status = getCloseStatus(d.latestMonth);
+    const progressColor = d.closeProgress >= 80 ? 'var(--green)' : d.closeProgress >= 40 ? 'var(--yellow)' : 'var(--gray-400)';
+
+    return `<tr>
+      <td style="font-weight:600">${d.client}</td>
+      <td><div class="assignee"><div class="avatar" style="background:${avatarColor(d.preparer)};width:26px;height:26px;font-size:10px">${initials(d.preparer)}</div>${d.preparer}</div></td>
+      <td><div class="assignee"><div class="avatar" style="background:${avatarColor(d.reviewer)};width:26px;height:26px;font-size:10px">${initials(d.reviewer)}</div>${d.reviewer}</div></td>
+      <td style="font-weight:600">${monthLabel(d.latestMonth)}</td>
+      <td>
+        <div class="close-progress">
+          <span class="close-pct" style="color:${progressColor}">${d.closeProgress}%</span>
+          <div class="close-bar-track"><div class="close-bar-fill" style="width:${d.closeProgress}%;background:${progressColor}"></div></div>
+        </div>
+      </td>
+      <td style="font-weight:700;color:${d.score >= 80 ? 'var(--green-dark)' : d.score >= 65 ? 'var(--yellow-dark)' : 'var(--gray-500)'}">${d.score}</td>
+      <td><span class="badge ${status.badgeClass}"><span class="dot"></span>${status.label}</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('rowCount').textContent = `Showing ${filteredData.length} of ${MOCK_DATA.length} clients`;
+}
+
+function syncFromDouble() {
+  const btn = event.target;
+  btn.textContent = '⟳ Syncing...'; btn.disabled = true;
+  setTimeout(() => {
+    btn.innerHTML = '⟳ Sync from Double'; btn.disabled = false;
+    document.getElementById('lastSync').textContent = 'Last synced: ' + new Date().toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+  }, 1200);
+}
+
+function exportCSV() {
+  const headers = ['Client Name','Preparer','Reviewer','Latest Published','Close Progress','ICP Score','Status'];
+  const rows = filteredData.map(d => [d.client, d.preparer, d.reviewer, monthLabel(d.latestMonth), d.closeProgress + '%', d.score, getCloseStatus(d.latestMonth).label]);
+  let csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'monthly-close-' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
+}
+
+init();
+</script>
+</body>
+</html>

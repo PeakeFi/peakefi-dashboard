@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PeakeFi — Operations Hub</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f4f6fa; color: #000b20; }
+  :root {
+    --blue: #4463bb; --blue-light: #5a7ad4; --blue-bg: #eef2fb;
+    --navy: #000b20; --white: #ffffff;
+    --green: #22c55e; --green-bg: #ecfdf5; --green-dark: #16a34a;
+    --yellow: #eab308; --yellow-bg: #fefce8; --yellow-dark: #a16207;
+    --orange: #f97316; --orange-bg: #fff7ed;
+    --red: #ef4444; --red-bg: #fef2f2; --red-dark: #dc2626;
+    --purple: #8b5cf6; --purple-bg: #f5f3ff;
+    --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb;
+    --gray-300: #d1d5db; --gray-400: #9ca3af; --gray-500: #6b7280;
+    --gray-600: #4b5563; --gray-700: #374151;
+    --sidebar-w: 220px;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,11,32,.08), 0 1px 2px rgba(0,11,32,.06);
+    --shadow-md: 0 4px 6px -1px rgba(0,11,32,.08);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh;
+    background: var(--navy); color: var(--white); display: flex; flex-direction: column;
+    z-index: 100;
+  }
+  .sidebar-brand { padding: 24px 20px 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
+  .sidebar-brand h1 { font-size: 20px; font-weight: 800; letter-spacing: -.3px; }
+  .sidebar-brand p { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+  .sidebar-nav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px;
+    font-size: 13px; font-weight: 500; color: rgba(255,255,255,.6); cursor: pointer;
+    transition: all .15s; text-decoration: none; border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.85); }
+  .nav-item.active { background: var(--blue); color: var(--white); font-weight: 600; }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-divider { height: 1px; background: rgba(255,255,255,.06); margin: 8px 4px; }
+  .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.08); font-size: 11px; color: var(--gray-500); }
+
+  /* ── Main Content ── */
+  .main { margin-left: var(--sidebar-w); min-height: 100vh; position: relative; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Iframe pages ── */
+  .page-frame { width: 100%; height: 100vh; border: none; }
+
+  /* ══════════════════════════════════════════════════════
+     AI ASSISTANT PANEL
+     ══════════════════════════════════════════════════════ */
+  .ai-toggle {
+    position: fixed; bottom: 24px; right: 24px; z-index: 200;
+    width: 56px; height: 56px; border-radius: 50%; border: none;
+    background: var(--blue); color: var(--white); font-size: 24px;
+    cursor: pointer; box-shadow: 0 4px 12px rgba(68,99,187,.4);
+    transition: all .2s; display: flex; align-items: center; justify-content: center;
+  }
+  .ai-toggle:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(68,99,187,.5); }
+  .ai-toggle.open { background: var(--gray-600); }
+
+  .ai-panel {
+    position: fixed; bottom: 92px; right: 24px; z-index: 200;
+    width: 420px; max-height: 560px; background: var(--white);
+    border-radius: 16px; box-shadow: 0 8px 30px rgba(0,11,32,.18);
+    display: none; flex-direction: column; overflow: hidden;
+  }
+  .ai-panel.open { display: flex; }
+
+  .ai-header {
+    padding: 16px 20px; background: var(--navy); color: var(--white);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .ai-header-left { display: flex; align-items: center; gap: 10px; }
+  .ai-header h3 { font-size: 15px; font-weight: 700; }
+  .ai-header .ai-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+  .ai-header button { background: none; border: none; color: rgba(255,255,255,.6); cursor: pointer; font-size: 18px; }
+
+  .ai-messages {
+    flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px;
+    max-height: 380px;
+  }
+  .ai-msg {
+    max-width: 88%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5;
+  }
+  .ai-msg.assistant {
+    background: var(--blue-bg); color: var(--navy); align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .ai-msg.user {
+    background: var(--navy); color: var(--white); align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .ai-msg .msg-meta { font-size: 10px; color: var(--gray-400); margin-top: 4px; }
+  .ai-msg.assistant .msg-meta { color: var(--gray-500); }
+  .ai-typing { display: flex; gap: 4px; padding: 10px 14px; align-self: flex-start; }
+  .ai-typing span {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--gray-400);
+    animation: blink 1.2s infinite;
+  }
+  .ai-typing span:nth-child(2) { animation-delay: .2s; }
+  .ai-typing span:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,60%,100% { opacity: .3; } 30% { opacity: 1; } }
+
+  .ai-input-row {
+    padding: 12px 16px; border-top: 1px solid var(--gray-200);
+    display: flex; gap: 8px;
+  }
+  .ai-input {
+    flex: 1; padding: 10px 14px; border: 1px solid var(--gray-200); border-radius: 10px;
+    font-size: 13px; outline: none; resize: none; font-family: inherit; line-height: 1.4;
+  }
+  .ai-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(68,99,187,.12); }
+  .ai-send {
+    width: 38px; height: 38px; border-radius: 10px; border: none;
+    background: var(--blue); color: var(--white); cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center; transition: all .15s;
+    flex-shrink: 0;
+  }
+  .ai-send:hover { background: var(--blue-light); }
+
+  .suggested-q {
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 0 20px 12px;
+  }
+  .sq-chip {
+    padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 500;
+    background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200);
+    cursor: pointer; transition: all .15s;
+  }
+  .sq-chip:hover { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
+
+  /* ── Overview Page ── */
+  .overview { padding: 28px 32px; }
+  .overview h2 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .overview .subtitle { font-size: 13px; color: var(--gray-500); margin-bottom: 24px; }
+  .overview .brand-line { height: 3px; background: linear-gradient(90deg, var(--blue), var(--navy)); border-radius: 2px; margin-bottom: 28px; }
+
+  .overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 32px; }
+  .overview-card {
+    background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 24px; border-left: 4px solid var(--blue); cursor: pointer; transition: all .2s;
+  }
+  .overview-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .overview-card h3 { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .overview-card p { font-size: 13px; color: var(--gray-500); line-height: 1.5; }
+  .overview-card .card-stats { display: flex; gap: 16px; margin-top: 14px; }
+  .overview-card .cs { text-align: center; }
+  .overview-card .cs-val { font-size: 22px; font-weight: 800; }
+  .overview-card .cs-label { font-size: 10px; color: var(--gray-500); text-transform: uppercase; letter-spacing: .3px; }
+
+  .team-section h3 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+  .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .team-card {
+    background: var(--white); border-radius: 8px; box-shadow: var(--shadow); padding: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .team-avatar {
+    width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: var(--white); flex-shrink: 0;
+  }
+  .team-info { flex: 1; }
+  .team-name { font-size: 13px; font-weight: 700; }
+  .team-role { font-size: 11px; color: var(--gray-500); }
+  .team-metric { font-size: 18px; font-weight: 800; color: var(--blue); text-align: right; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <h1>PeakeFi</h1>
+    <p>Operations Hub</p>
+  </div>
+  <div class="sidebar-nav">
+    <button class="nav-item active" onclick="showPage('overview')">
+      <span class="nav-icon">📊</span> Overview
+    </button>
+    <button class="nav-item" onclick="showPage('classify')">
+      <span class="nav-icon">🏷️</span> Classify Transactions
+    </button>
+    <button class="nav-item" onclick="showPage('monthly-close')">
+      <span class="nav-icon">📅</span> Monthly Close
+    </button>
+    <div class="nav-divider"></div>
+    <button class="nav-item" style="opacity:.4;cursor:default" disabled>
+      <span class="nav-icon">🎯</span> Scoring Tool
+    </button>
+    <button class="nav-item" style="opacity:.4;cursor:default" disabled>
+      <span class="nav-icon">🔍</span> Prospecting
+    </button>
+    <button class="nav-item" style="opacity:.4;cursor:default" disabled>
+      <span class="nav-icon">⏳</span> Aging Details
+    </button>
+    <button class="nav-item" style="opacity:.4;cursor:default" disabled>
+      <span class="nav-icon">💰</span> Cash Flow
+    </button>
+  </div>
+  <div class="sidebar-footer">
+    PeakeFi Operations v1.0<br>
+    MVP — Mock Data
+  </div>
+</nav>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Overview Page -->
+  <div class="page active" id="page-overview">
+    <div class="overview">
+      <h2>Firm Overview</h2>
+      <p class="subtitle">Your operational snapshot — March 15, 2026</p>
+      <div class="brand-line"></div>
+
+      <div class="overview-grid">
+        <div class="overview-card" onclick="showPage('classify')" style="border-left-color:var(--blue)">
+          <h3>Classify Transactions</h3>
+          <p>Track bi-weekly transaction categorization compliance across all clients.</p>
+          <div class="card-stats">
+            <div class="cs"><div class="cs-val" style="color:var(--green)">15</div><div class="cs-label">On Track</div></div>
+            <div class="cs"><div class="cs-val" style="color:var(--yellow)">5</div><div class="cs-label">Due Soon</div></div>
+            <div class="cs"><div class="cs-val" style="color:var(--orange)">3</div><div class="cs-label">Urgent</div></div>
+            <div class="cs"><div class="cs-val" style="color:var(--red)">2</div><div class="cs-label">Overdue</div></div>
+          </div>
+        </div>
+
+        <div class="overview-card" onclick="showPage('monthly-close')" style="border-left-color:var(--purple)">
+          <h3>Monthly Close</h3>
+          <p>Monitor month-end close progress and staff allocations across the firm.</p>
+          <div class="card-stats">
+            <div class="cs"><div class="cs-val" style="color:var(--green)">14</div><div class="cs-label">Current</div></div>
+            <div class="cs"><div class="cs-val" style="color:var(--yellow)">22</div><div class="cs-label">1 Behind</div></div>
+            <div class="cs"><div class="cs-val" style="color:var(--red)">28</div><div class="cs-label">2+ Behind</div></div>
+            <div class="cs"><div class="cs-val" style="color:var(--blue)">72</div><div class="cs-label">Avg Score</div></div>
+          </div>
+        </div>
+
+        <div class="overview-card" style="border-left-color:var(--gray-300);opacity:.6;cursor:default">
+          <h3>Scoring Tool</h3>
+          <p>ICP scoring and client grading system. Currently hosted separately — integration coming soon.</p>
+          <div class="card-stats">
+            <div class="cs"><div class="cs-val" style="color:var(--gray-400)">—</div><div class="cs-label">Connect</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="team-section">
+        <h3>Team at a Glance</h3>
+        <div class="team-grid" id="teamGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Classify Transactions (iframe) -->
+  <div class="page" id="page-classify">
+    <iframe class="page-frame" src="classify-transactions.html"></iframe>
+  </div>
+
+  <!-- Monthly Close (iframe) -->
+  <div class="page" id="page-monthly-close">
+    <iframe class="page-frame" src="monthly-close.html"></iframe>
+  </div>
+
+</div>
+
+<!-- AI Assistant Toggle -->
+<button class="ai-toggle" id="aiToggle" onclick="toggleAI()" title="Ask PeakeFi AI">💬</button>
+
+<!-- AI Assistant Panel -->
+<div class="ai-panel" id="aiPanel">
+  <div class="ai-header">
+    <div class="ai-header-left">
+      <span class="ai-dot"></span>
+      <h3>PeakeFi Assistant</h3>
+    </div>
+    <button onclick="toggleAI()">✕</button>
+  </div>
+  <div class="ai-messages" id="aiMessages">
+    <div class="ai-msg assistant">
+      Hey Charlie! I can answer questions about your clients, staff workloads, and project statuses. Try asking me something like the suggestions below.
+      <div class="msg-meta">PeakeFi AI</div>
+    </div>
+  </div>
+  <div class="suggested-q" id="suggestedQ">
+    <span class="sq-chip" onclick="askSuggested(this)">What are Charlie's largest projects?</span>
+    <span class="sq-chip" onclick="askSuggested(this)">Who has the most overdue closes?</span>
+    <span class="sq-chip" onclick="askSuggested(this)">Show me Karina's workload</span>
+    <span class="sq-chip" onclick="askSuggested(this)">Which clients are behind?</span>
+  </div>
+  <div class="ai-input-row">
+    <textarea class="ai-input" id="aiInput" placeholder="Ask about clients, staff, or projects..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+    <button class="ai-send" onclick="sendMessage()">➤</button>
+  </div>
+</div>
+
+<script>
+// ── Page Navigation ──
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  // Find matching nav item
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.textContent.trim().toLowerCase().replace(/\s+/g,'-') === id ||
+        (id === 'overview' && n.textContent.includes('Overview')) ||
+        (id === 'classify' && n.textContent.includes('Classify')) ||
+        (id === 'monthly-close' && n.textContent.includes('Monthly'))) {
+      n.classList.add('active');
+    }
+  });
+}
+
+// ── Team Grid ──
+const TEAM = [
+  { name: "Charlie Reynolds", role: "Firm Owner", clients: 6, avgScore: 92, color: "#4463bb" },
+  { name: "Ona Phago", role: "Preparer", clients: 16, avgScore: 68, color: "#2d8659" },
+  { name: "Karina Maharjan", role: "Preparer", clients: 16, avgScore: 71, color: "#9333ea" },
+  { name: "Matt Larkin", role: "Preparer", clients: 17, avgScore: 62, color: "#dc6b20" },
+  { name: "William Garcia", role: "Reviewer", clients: 0, avgScore: 0, color: "#0891b2" },
+  { name: "Linh Guy", role: "Reviewer", clients: 0, avgScore: 0, color: "#be123c" },
+];
+
+function renderTeamGrid() {
+  const grid = document.getElementById('teamGrid');
+  grid.innerHTML = TEAM.filter(t => t.clients > 0).map(t => `
+    <div class="team-card">
+      <div class="team-avatar" style="background:${t.color}">${t.name.split(' ').map(w=>w[0]).join('')}</div>
+      <div class="team-info">
+        <div class="team-name">${t.name}</div>
+        <div class="team-role">${t.role} · ${t.clients} clients</div>
+      </div>
+      <div class="team-metric">${t.avgScore}</div>
+    </div>
+  `).join('');
+}
+renderTeamGrid();
+
+// ══════════════════════════════════════════════════════════════
+//  AI ASSISTANT — Mock Response Engine
+//  Cameron: Replace this with a call to Claude's API.
+//  Send the user's question + relevant Double data as context.
+//  See integration notes at the bottom of this script.
+// ══════════════════════════════════════════════════════════════
+
+function toggleAI() {
+  const panel = document.getElementById('aiPanel');
+  const toggle = document.getElementById('aiToggle');
+  panel.classList.toggle('open');
+  toggle.classList.toggle('open');
+  toggle.textContent = panel.classList.contains('open') ? '✕' : '💬';
+}
+
+function askSuggested(el) {
+  document.getElementById('aiInput').value = el.textContent;
+  sendMessage();
+}
+
+function sendMessage() {
+  const input = document.getElementById('aiInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  addMessage(text, 'user');
+  document.getElementById('suggestedQ').style.display = 'none';
+
+  // Show typing indicator
+  const typing = document.createElement('div');
+  typing.className = 'ai-typing';
+  typing.innerHTML = '<span></span><span></span><span></span>';
+  document.getElementById('aiMessages').appendChild(typing);
+  scrollMessages();
+
+  // Simulate response delay
+  setTimeout(() => {
+    typing.remove();
+    const response = generateMockResponse(text);
+    addMessage(response, 'assistant');
+  }, 800 + Math.random() * 600);
+}
+
+function addMessage(text, role) {
+  const container = document.getElementById('aiMessages');
+  const msg = document.createElement('div');
+  msg.className = 'ai-msg ' + role;
+  msg.innerHTML = text + (role === 'assistant' ? '<div class="msg-meta">PeakeFi AI</div>' : '');
+  container.appendChild(msg);
+  scrollMessages();
+}
+
+function scrollMessages() {
+  const c = document.getElementById('aiMessages');
+  c.scrollTop = c.scrollHeight;
+}
+
+// ── Mock Response Generator ──
+// Cameron: This is the part to replace with Claude API calls.
+// The pattern would be:
+// 1. User asks question
+// 2. You send question + relevant client data (from Double API) to Claude
+// 3. Claude returns a natural language answer
+// 4. Display it here
+function generateMockResponse(q) {
+  const ql = q.toLowerCase();
+
+  if (ql.includes('charlie') && (ql.includes('project') || ql.includes('client') || ql.includes('outstanding'))) {
+    return `<strong>Charlie Reynolds' Portfolio:</strong><br><br>
+    Charlie manages 6 clients with an avg ICP score of 92 (highest on the team):<br><br>
+    • <strong>Andi Reynolds</strong> — Score: 100, Close: Current (Feb 2026) ✅<br>
+    • <strong>PeakeFi, LLC</strong> — Score: 95, Close: Current ✅<br>
+    • <strong>Sterling Financial Group</strong> — Score: 90, Close: Current ✅<br>
+    • <strong>Rivera Family Trust</strong> — Score: 87, Close: Current ✅<br>
+    • <strong>Enlighten Technologies</strong> — Score: 92, Close: Current ✅<br>
+    • <strong>Carenostics Inc</strong> — Score: 88, Close: Nov 2025 ⚠️ (3 months behind)<br><br>
+    Carenostics is the one to watch — it's 3 months behind on close with 85% progress. The other 5 are all current.`;
+  }
+
+  if (ql.includes('overdue') || ql.includes('behind')) {
+    return `<strong>Clients Most Behind on Close:</strong><br><br>
+    🔴 <strong>Black Rock Construction</strong> (Matt Larkin) — Last closed: Dec 2024, 14 months behind<br>
+    🔴 <strong>Suite Dreams, LLC</strong> (Karina Maharjan) — Last closed: Jul 2025, 7 months behind<br>
+    🔴 <strong>Biofuse Wellness PLLC</strong> (Karina Maharjan) — Last closed: Jul 2025, 7 months behind<br>
+    🔴 <strong>Chad Rockwell LTR</strong> (Ona Phago) — Last closed: Jun 2025, 8 months behind<br>
+    🔴 <strong>Finding Dory, LLC</strong> (Ona Phago) — Last closed: Jun 2025, 8 months behind<br><br>
+    Matt and Karina each have 2 of the most behind clients. I'd suggest prioritizing Black Rock Construction since it's the furthest behind.`;
+  }
+
+  if (ql.includes('karina') && (ql.includes('workload') || ql.includes('client') || ql.includes('allocation'))) {
+    return `<strong>Karina Maharjan's Workload:</strong><br><br>
+    📋 <strong>16 clients</strong> | Avg ICP Score: <strong>71</strong><br><br>
+    <strong>Current (Feb 2026):</strong> Jordan Street Homes, FootHill Legacy Holdings (2 clients)<br>
+    <strong>1 Behind (Jan 2026):</strong> Horizon STR, L.B Capital, Nolan & Associates, Della Investments, The Bone Family (5 clients)<br>
+    <strong>2+ Behind:</strong> 9 clients, including Suite Dreams and Biofuse Wellness (7 months behind each)<br><br>
+    Only 12.5% of her book is current. She's carrying a heavy load with several complex, behind clients. Worth discussing whether to redistribute some of the furthest-behind ones.`;
+  }
+
+  if (ql.includes('matt') && (ql.includes('workload') || ql.includes('client'))) {
+    return `<strong>Matt Larkin's Workload:</strong><br><br>
+    📋 <strong>17 clients</strong> | Avg ICP Score: <strong>62</strong> (lowest on team)<br><br>
+    Matt has the most clients and the lowest average score. His book includes Black Rock Construction (14 months behind, Score: 48) and Duame Big (12 months behind, Score: 50). These low-score, far-behind clients are dragging down his metrics significantly.`;
+  }
+
+  if (ql.includes('ona') && (ql.includes('workload') || ql.includes('client'))) {
+    return `<strong>Ona Phago's Workload:</strong><br><br>
+    📋 <strong>16 clients</strong> | Avg ICP Score: <strong>68</strong><br><br>
+    <strong>Current:</strong> Tech Bird Consultants (96), Bone Collective (85), CRE Creative (82), Morales Investment (83), Pine Creek (81) — 5 clients ✅<br>
+    <strong>Most Behind:</strong> Chad Rockwell LTR (8 mo), Finding Dory (8 mo)<br><br>
+    Ona has a solid current rate at ~31%, but those two far-behind clients need attention.`;
+  }
+
+  if (ql.includes('score') || ql.includes('balance') || ql.includes('imbalance')) {
+    return `<strong>Team Score Comparison:</strong><br><br>
+    🏆 Charlie Reynolds: <strong>92 avg</strong> (6 clients)<br>
+    📊 Karina Maharjan: <strong>71 avg</strong> (16 clients)<br>
+    📊 Ona Phago: <strong>68 avg</strong> (16 clients)<br>
+    📊 Matt Larkin: <strong>62 avg</strong> (17 clients)<br><br>
+    There's a 30-point spread between the highest and lowest. Matt is carrying the most clients AND the lowest-scoring ones — that's a double hit. Consider moving 1-2 higher-score clients from Karina or Ona to Matt, and redistributing some of his lower-score clients.`;
+  }
+
+  if (ql.includes('priority') || ql.includes('this week') || ql.includes('focus')) {
+    return `<strong>Top Priorities This Week:</strong><br><br>
+    1. 🔴 <strong>5 clients overdue on Classify Transactions</strong> — These need immediate attention to stay compliant with the 2-week rule<br>
+    2. 🔴 <strong>Black Rock Construction</strong> — 14 months behind on close, assign a catch-up sprint<br>
+    3. ⚠️ <strong>Carenostics Inc</strong> (Charlie's client) — 85% close progress on Nov 2025, push to finish<br>
+    4. 📊 <strong>Matt Larkin overloaded</strong> — 17 clients, lowest avg score, consider rebalancing<br>
+    5. 🏷️ <strong>3 clients in "Urgent" for transaction classification</strong> — due within 3 days`;
+  }
+
+  // Default
+  return `I can answer questions about your clients, team workloads, close statuses, and scores. Try asking things like:<br><br>
+  • "What are [person]'s largest projects?"<br>
+  • "Who has the most overdue closes?"<br>
+  • "Show me [person]'s workload"<br>
+  • "Are the team scores balanced?"<br>
+  • "What should we focus on this week?"<br><br>
+  <em>Note: I'm running on mock data right now. Once Cameron connects the Double API, I'll have real-time answers.</em>`;
+}
+</script>
+</body>
+</html>
