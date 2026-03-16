@@ -449,12 +449,131 @@ function renderOverviewBarChart() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  AI ASSISTANT — Mock Response Engine
-//  Cameron: Replace this with a call to Claude's API.
-//  Send the user's question + relevant Double data as context.
-//  See integration notes at the bottom of this script.
+//  AI ASSISTANT — Data-Driven Response Engine
+//  Cameron: To make this real, replace generateResponse() with
+//  a fetch() call to a /api/ask endpoint in server.js that
+//  sends the question + client data to Claude's API.
+//  Add ANTHROPIC_API_KEY as an env var in Railway.
 // ══════════════════════════════════════════════════════════════
 
+// ── Full Mock Dataset (both dashboards combined) ──
+const CLIENT_DATA = [
+  { client: "Adamax, LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-09", closeProgress: 4, score: 78, classifyDue: "2026-03-18", classifyLast: "2026-03-04" },
+  { client: "AG Investment Partners dba The Comfy Nomad", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 9, score: 65, classifyDue: "2026-03-20", classifyLast: "2026-03-06" },
+  { client: "AGD Property Holdings LLC", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2025-09", closeProgress: 39, score: 72, classifyDue: "2026-03-22", classifyLast: "2026-03-08" },
+  { client: "Agile Properties", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 10, score: 68, classifyDue: "2026-03-16", classifyLast: "2026-03-02" },
+  { client: "Ajay & Pooja Short-term Rentals", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 0, score: 96, classifyDue: "2026-03-20", classifyLast: "2026-03-06" },
+  { client: "Alyson Gordon - Short term Rentals", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2025-10", closeProgress: 0, score: 71, classifyDue: "2026-03-14", classifyLast: "2026-02-28" },
+  { client: "Andi Reynolds", preparer: "Charlie Reynolds", reviewer: "Charlie Reynolds", latestMonth: "2026-02", closeProgress: 100, score: 100, classifyDue: "2026-03-26", classifyLast: "2026-03-12" },
+  { client: "Apke Investments LLC", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2025-08", closeProgress: 0, score: 62, classifyDue: "2026-03-12", classifyLast: "2026-02-26" },
+  { client: "Ardent Holdings Denver, LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 9, score: 74, classifyDue: "2026-03-19", classifyLast: "2026-03-05" },
+  { client: "Bar Crawl USA", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 12, score: 58, classifyDue: "2026-03-21", classifyLast: "2026-03-07" },
+  { client: "Big Jay's Landscaping", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 10, score: 55, classifyDue: "2026-03-17", classifyLast: "2026-03-03" },
+  { client: "Biofuse Hydration PLLC", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2025-11", closeProgress: 6, score: 60, classifyDue: "2026-03-15", classifyLast: "2026-03-01" },
+  { client: "Biofuse Wellness PLLC", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2025-07", closeProgress: 0, score: 52, classifyDue: "2026-03-13", classifyLast: "2026-02-27" },
+  { client: "Black Rock Construction, Inc", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2024-12", closeProgress: 0, score: 48, classifyDue: "2026-03-10", classifyLast: "2026-02-24" },
+  { client: "Bone Collective Studio, Inc", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 85, classifyDue: "2026-03-24", classifyLast: "2026-03-10" },
+  { client: "BZ Properties", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 11, score: 63, classifyDue: "2026-03-18", classifyLast: "2026-03-04" },
+  { client: "Carenostics Inc", preparer: "Charlie Reynolds", reviewer: "Linh Guy", latestMonth: "2025-11", closeProgress: 85, score: 88, classifyDue: "2026-03-23", classifyLast: "2026-03-09" },
+  { client: "Chad Rockwell LTR", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2025-06", closeProgress: 0, score: 45, classifyDue: "2026-03-11", classifyLast: "2026-02-25" },
+  { client: "CM Global Properties LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-06", closeProgress: 72, score: 70, classifyDue: "2026-03-16", classifyLast: "2026-03-02" },
+  { client: "Collin Hart Rentals", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 12, score: 59, classifyDue: "2026-03-20", classifyLast: "2026-03-06" },
+  { client: "CRE Creative, LLC", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2026-02", closeProgress: 100, score: 82, classifyDue: "2026-03-25", classifyLast: "2026-03-11" },
+  { client: "CRS Management", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 13, score: 97, classifyDue: "2026-03-18", classifyLast: "2026-03-04" },
+  { client: "Della Investments II LLC", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 15, score: 66, classifyDue: "2026-03-22", classifyLast: "2026-03-08" },
+  { client: "Duame Big, LLC", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2025-03", closeProgress: 9, score: 50, classifyDue: "2026-03-09", classifyLast: "2026-02-23" },
+  { client: "Ecommerce Now LLC", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2025-12", closeProgress: 100, score: 76, classifyDue: "2026-03-19", classifyLast: "2026-03-05" },
+  { client: "Emerald St Holdings, LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 12, score: 73, classifyDue: "2026-03-17", classifyLast: "2026-03-03" },
+  { client: "Enlighten Technologies Inc.", preparer: "Charlie Reynolds", reviewer: "Linh Guy", latestMonth: "2026-02", closeProgress: 91, score: 92, classifyDue: "2026-03-21", classifyLast: "2026-03-07" },
+  { client: "ERE Healthcare Advisors", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 80, classifyDue: "2026-03-24", classifyLast: "2026-03-10" },
+  { client: "Finding Dory, LLC", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2025-06", closeProgress: 0, score: 42, classifyDue: "2026-03-11", classifyLast: "2026-02-25" },
+  { client: "Flynn RE Broker, LLC", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 0, score: 57, classifyDue: "2026-03-19", classifyLast: "2026-03-05" },
+  { client: "FootHill Legacy Holdings, LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 78, classifyDue: "2026-03-23", classifyLast: "2026-03-09" },
+  { client: "Freedom to Rise Realty LLC", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2025-11", closeProgress: 90, score: 69, classifyDue: "2026-03-16", classifyLast: "2026-03-02" },
+  { client: "Greeview Trading", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 15, score: 64, classifyDue: "2026-03-15", classifyLast: "2026-03-01" },
+  { client: "Horizon STR Portfolio", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 20, score: 75, classifyDue: "2026-03-18", classifyLast: "2026-03-04" },
+  { client: "Hunt Properties, LLC", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2025-12", closeProgress: 8, score: 61, classifyDue: "2026-03-14", classifyLast: "2026-02-28" },
+  { client: "Jesse Dix Insurance and Financial Services", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 25, score: 67, classifyDue: "2026-03-20", classifyLast: "2026-03-06" },
+  { client: "Jordan Street Homes, LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 95, classifyDue: "2026-03-24", classifyLast: "2026-03-10" },
+  { client: "Kassy Slaughter - John West Property", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 18, score: 56, classifyDue: "2026-03-17", classifyLast: "2026-03-03" },
+  { client: "L.B Capital Investments LLC", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 30, score: 71, classifyDue: "2026-03-21", classifyLast: "2026-03-07" },
+  { client: "Lakewood Properties", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 22, score: 77, classifyDue: "2026-03-22", classifyLast: "2026-03-08" },
+  { client: "Land Investing Online, LLC", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 15, score: 54, classifyDue: "2026-03-16", classifyLast: "2026-03-02" },
+  { client: "Land Portal, LLC", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 18, score: 53, classifyDue: "2026-03-18", classifyLast: "2026-03-04" },
+  { client: "Lauren Rockwell Real Estate, LLC", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2025-11", closeProgress: 5, score: 46, classifyDue: "2026-03-13", classifyLast: "2026-02-27" },
+  { client: "Maverick Property Holdings, LLC", preparer: "Karina Maharjan", reviewer: "William Garcia", latestMonth: "2025-10", closeProgress: 8, score: 60, classifyDue: "2026-03-15", classifyLast: "2026-03-01" },
+  { client: "Morales Investment Group", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2026-02", closeProgress: 100, score: 83, classifyDue: "2026-03-25", classifyLast: "2026-03-11" },
+  { client: "Nolan & Associates", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 35, score: 79, classifyDue: "2026-03-20", classifyLast: "2026-03-06" },
+  { client: "PeakeFi, LLC", preparer: "Charlie Reynolds", reviewer: "Linh Guy", latestMonth: "2026-02", closeProgress: 100, score: 95, classifyDue: "2026-03-28", classifyLast: "2026-03-14" },
+  { client: "PFP Holdings", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-02", closeProgress: 100, score: 97, classifyDue: "2026-03-21", classifyLast: "2026-03-07" },
+  { client: "Pier Relaxation NewCo", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 0, score: 51, classifyDue: "2026-03-14", classifyLast: "2026-02-28" },
+  { client: "Pine Creek Holdings", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2026-02", closeProgress: 100, score: 81, classifyDue: "2026-03-26", classifyLast: "2026-03-12" },
+  { client: "Price Pictures Address, LLC", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2025-12", closeProgress: 20, score: 58, classifyDue: "2026-03-16", classifyLast: "2026-03-02" },
+  { client: "Redwood Analytics Inc", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 40, score: 74, classifyDue: "2026-03-20", classifyLast: "2026-03-06" },
+  { client: "Rivera Family Trust", preparer: "Charlie Reynolds", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 87, classifyDue: "2026-03-22", classifyLast: "2026-03-08" },
+  { client: "Savannah Tadin Aesthetics", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2025-11", closeProgress: 5, score: 63, classifyDue: "2026-03-15", classifyLast: "2026-03-01" },
+  { client: "Sawgrass Development LLC", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 28, score: 72, classifyDue: "2026-03-19", classifyLast: "2026-03-05" },
+  { client: "Stead Holdings, LLC", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2025-12", closeProgress: 12, score: 55, classifyDue: "2026-03-15", classifyLast: "2026-03-01" },
+  { client: "Sterling Financial Group", preparer: "Charlie Reynolds", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 90, classifyDue: "2026-03-23", classifyLast: "2026-03-09" },
+  { client: "Suite Dreams, LLC", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2025-07", closeProgress: 0, score: 40, classifyDue: "2026-03-10", classifyLast: "2026-02-24" },
+  { client: "Summit Real Estate Mgmt", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 32, score: 70, classifyDue: "2026-03-25", classifyLast: "2026-03-11" },
+  { client: "Tech Bird Consultants LLC.", preparer: "Ona Phago", reviewer: "William Garcia", latestMonth: "2026-02", closeProgress: 100, score: 96, classifyDue: "2026-03-16", classifyLast: "2026-03-02" },
+  { client: "The Bone Family - Rental Real Estate", preparer: "Karina Maharjan", reviewer: "Linh Guy", latestMonth: "2026-01", closeProgress: 28, score: 95, classifyDue: "2026-03-23", classifyLast: "2026-03-09" },
+  { client: "Westbrook Capital LLC", preparer: "Matt Larkin", reviewer: "William Garcia", latestMonth: "2026-01", closeProgress: 25, score: 68, classifyDue: "2026-03-17", classifyLast: "2026-03-03" },
+  { client: "Willis Rockwell Vacations, LLC", preparer: "Ona Phago", reviewer: "Linh Guy", latestMonth: "2025-11", closeProgress: 10, score: 49, classifyDue: "2026-03-14", classifyLast: "2026-02-28" },
+  { client: "WK Dev LLC", preparer: "Matt Larkin", reviewer: "Linh Guy", latestMonth: "2025-12", closeProgress: 14, score: 52, classifyDue: "2026-03-15", classifyLast: "2026-03-01" },
+];
+
+// ── Data Query Helpers ──
+const TODAY = new Date('2026-03-15');
+const TARGET_CLOSE = '2026-02';
+const MONTH_NAMES = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const ALL_MONTHS = ['2024-12','2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02'];
+
+function fmtMonth(ym) { const [y,m] = ym.split('-'); return MONTH_NAMES[parseInt(m)] + ' ' + y; }
+function monthsBehind(ym) { return ALL_MONTHS.indexOf(TARGET_CLOSE) - ALL_MONTHS.indexOf(ym); }
+function classifyDaysLeft(d) { return Math.round((new Date(d.classifyDue) - TODAY) / 86400000); }
+function classifyStatus(d) {
+  const days = classifyDaysLeft(d);
+  if (days <= 0) return 'Overdue';
+  if (days <= 3) return 'Urgent';
+  if (days <= 7) return 'Due Soon';
+  return 'On Track';
+}
+function closeStatus(d) {
+  const behind = monthsBehind(d.latestMonth);
+  if (behind <= 0) return 'Current';
+  if (behind === 1) return '1 Behind';
+  return behind + ' Behind';
+}
+
+function getStaffData(name) {
+  const clients = CLIENT_DATA.filter(d => d.preparer === name);
+  if (clients.length === 0) return null;
+  const avgScore = Math.round(clients.reduce((s,c) => s + c.score, 0) / clients.length);
+  const current = clients.filter(c => monthsBehind(c.latestMonth) <= 0);
+  const behind = clients.filter(c => monthsBehind(c.latestMonth) >= 2);
+  const overdue = clients.filter(c => classifyDaysLeft(c) <= 0);
+  const urgent = clients.filter(c => { const d = classifyDaysLeft(c); return d > 0 && d <= 3; });
+  return { name, clients, avgScore, current, behind, overdue, urgent };
+}
+
+function findClient(name) {
+  const nl = name.toLowerCase();
+  return CLIENT_DATA.find(d => d.client.toLowerCase().includes(nl));
+}
+
+function findStaffName(q) {
+  const names = ['Charlie Reynolds','Ona Phago','Karina Maharjan','Matt Larkin','William Garcia','Linh Guy'];
+  const firstNames = { charlie:'Charlie Reynolds', ona:'Ona Phago', karina:'Karina Maharjan', matt:'Matt Larkin', william:'William Garcia', linh:'Linh Guy' };
+  const ql = q.toLowerCase();
+  for (const [first, full] of Object.entries(firstNames)) {
+    if (ql.includes(first)) return full;
+  }
+  return null;
+}
+
+// ── AI Chat UI ──
 function toggleAI() {
   const panel = document.getElementById('aiPanel');
   const toggle = document.getElementById('aiToggle');
@@ -473,31 +592,27 @@ function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
   input.value = '';
-
   addMessage(text, 'user');
   document.getElementById('suggestedQ').style.display = 'none';
 
-  // Show typing indicator
   const typing = document.createElement('div');
   typing.className = 'ai-typing';
   typing.innerHTML = '<span></span><span></span><span></span>';
   document.getElementById('aiMessages').appendChild(typing);
   scrollMessages();
 
-  // Simulate response delay
   setTimeout(() => {
     typing.remove();
-    const response = generateMockResponse(text);
-    addMessage(response, 'assistant');
-  }, 800 + Math.random() * 600);
+    addMessage(generateResponse(text), 'assistant');
+  }, 600 + Math.random() * 800);
 }
 
 function addMessage(text, role) {
-  const container = document.getElementById('aiMessages');
+  const c = document.getElementById('aiMessages');
   const msg = document.createElement('div');
   msg.className = 'ai-msg ' + role;
   msg.innerHTML = text + (role === 'assistant' ? '<div class="msg-meta">PeakeFi AI</div>' : '');
-  container.appendChild(msg);
+  c.appendChild(msg);
   scrollMessages();
 }
 
@@ -506,87 +621,170 @@ function scrollMessages() {
   c.scrollTop = c.scrollHeight;
 }
 
-// ── Mock Response Generator ──
-// Cameron: This is the part to replace with Claude API calls.
-// The pattern would be:
-// 1. User asks question
-// 2. You send question + relevant client data (from Double API) to Claude
-// 3. Claude returns a natural language answer
-// 4. Display it here
-function generateMockResponse(q) {
+// ══════════════════════════════════════════════════════════════
+//  RESPONSE ENGINE — Queries the dataset dynamically
+//  Cameron: Replace this function with a call to Claude's API
+//  passing the question + CLIENT_DATA as context.
+// ══════════════════════════════════════════════════════════════
+function generateResponse(q) {
   const ql = q.toLowerCase();
 
-  if (ql.includes('charlie') && (ql.includes('project') || ql.includes('client') || ql.includes('outstanding'))) {
-    return `<strong>Charlie Reynolds' Portfolio:</strong><br><br>
-    Charlie manages 6 clients with an avg ICP score of 92 (highest on the team):<br><br>
-    • <strong>Andi Reynolds</strong> — Score: 100, Close: Current (Feb 2026) ✅<br>
-    • <strong>PeakeFi, LLC</strong> — Score: 95, Close: Current ✅<br>
-    • <strong>Sterling Financial Group</strong> — Score: 90, Close: Current ✅<br>
-    • <strong>Rivera Family Trust</strong> — Score: 87, Close: Current ✅<br>
-    • <strong>Enlighten Technologies</strong> — Score: 92, Close: Current ✅<br>
-    • <strong>Carenostics Inc</strong> — Score: 88, Close: Nov 2025 ⚠️ (3 months behind)<br><br>
-    Carenostics is the one to watch — it's 3 months behind on close with 85% progress. The other 5 are all current.`;
+  // ── Detect: specific client lookup ──
+  const clientMatch = CLIENT_DATA.find(d => ql.includes(d.client.toLowerCase().split(',')[0].split(' - ')[0].toLowerCase()));
+  if (clientMatch && !findStaffName(q)) {
+    const d = clientMatch;
+    const cb = monthsBehind(d.latestMonth);
+    const cd = classifyDaysLeft(d);
+    const closeLabel = cb <= 0 ? 'Current ✅' : cb + ' month' + (cb>1?'s':'') + ' behind ⚠️';
+    const classLabel = cd <= 0 ? Math.abs(cd) + 'd overdue 🔴' : cd + ' days left';
+    return `<strong>${d.client}</strong><br><br>
+    📋 <strong>Preparer:</strong> ${d.preparer}<br>
+    👁️ <strong>Reviewer:</strong> ${d.reviewer}<br>
+    🏆 <strong>ICP Score:</strong> ${d.score}<br>
+    📅 <strong>Latest Close:</strong> ${fmtMonth(d.latestMonth)} (${closeLabel})<br>
+    📊 <strong>Close Progress:</strong> ${d.closeProgress}%<br>
+    🏷️ <strong>Classify Transactions:</strong> Due ${new Date(d.classifyDue).toLocaleDateString('en-US',{month:'short',day:'numeric'})} (${classLabel})<br><br>
+    ${cb >= 2 ? '⚠️ This client is ' + cb + ' months behind on close — consider prioritizing.' : ''}
+    ${cd <= 0 ? '🔴 Transaction classification is overdue — needs immediate attention.' : ''}
+    ${cb <= 0 && cd > 3 ? '👍 This client is in good shape across the board.' : ''}`;
   }
 
-  if (ql.includes('overdue') || ql.includes('behind')) {
-    return `<strong>Clients Most Behind on Close:</strong><br><br>
-    🔴 <strong>Black Rock Construction</strong> (Matt Larkin) — Last closed: Dec 2024, 14 months behind<br>
-    🔴 <strong>Suite Dreams, LLC</strong> (Karina Maharjan) — Last closed: Jul 2025, 7 months behind<br>
-    🔴 <strong>Biofuse Wellness PLLC</strong> (Karina Maharjan) — Last closed: Jul 2025, 7 months behind<br>
-    🔴 <strong>Chad Rockwell LTR</strong> (Ona Phago) — Last closed: Jun 2025, 8 months behind<br>
-    🔴 <strong>Finding Dory, LLC</strong> (Ona Phago) — Last closed: Jun 2025, 8 months behind<br><br>
-    Matt and Karina each have 2 of the most behind clients. I'd suggest prioritizing Black Rock Construction since it's the furthest behind.`;
+  // ── Detect: staff workload / portfolio ──
+  const staffName = findStaffName(q);
+  if (staffName && (ql.includes('workload') || ql.includes('client') || ql.includes('portfolio') || ql.includes('project') || ql.includes('outstanding') || ql.includes('allocation') || ql.includes('how is') || ql.includes('show me') || ql.includes('what are') || ql.includes('tell me about'))) {
+    const s = getStaffData(staffName);
+    if (!s) {
+      // Might be a reviewer
+      const reviewed = CLIENT_DATA.filter(d => d.reviewer === staffName);
+      if (reviewed.length > 0) {
+        const behindR = reviewed.filter(c => monthsBehind(c.latestMonth) >= 2);
+        return `<strong>${staffName}</strong> is a <strong>Reviewer</strong> covering <strong>${reviewed.length} clients</strong>.<br><br>
+        ${behindR.length > 0 ? '⚠️ <strong>' + behindR.length + ' clients</strong> they review are 2+ months behind on close:<br>' + behindR.sort((a,b) => monthsBehind(b.latestMonth) - monthsBehind(a.latestMonth)).slice(0,5).map(c => '• ' + c.client + ' (' + c.preparer + ') — ' + fmtMonth(c.latestMonth)).join('<br>') : '✅ No critical issues across their reviewed clients.'}`;
+      }
+      return `I don't have data for "${staffName}" as a preparer. They may be a reviewer — try asking about their reviewed clients.`;
+    }
+
+    const sortedByBehind = [...s.clients].sort((a,b) => monthsBehind(b.latestMonth) - monthsBehind(a.latestMonth));
+    const top5 = sortedByBehind.slice(0, 5);
+    const currentPct = Math.round((s.current.length / s.clients.length) * 100);
+
+    return `<strong>${s.name}'s Portfolio:</strong><br><br>
+    📋 <strong>${s.clients.length} clients</strong> | Avg ICP Score: <strong>${s.avgScore}</strong><br>
+    ✅ <strong>${s.current.length}</strong> current (${currentPct}%) | 🔴 <strong>${s.behind.length}</strong> 2+ months behind<br>
+    🏷️ <strong>${s.overdue.length}</strong> overdue on classify | ⚠️ <strong>${s.urgent.length}</strong> urgent<br><br>
+    <strong>Clients needing most attention:</strong><br>
+    ${top5.map(c => {
+      const cb = monthsBehind(c.latestMonth);
+      const icon = cb <= 0 ? '✅' : cb <= 1 ? '🟡' : '🔴';
+      return `${icon} <strong>${c.client}</strong> — ${fmtMonth(c.latestMonth)} (${cb <= 0 ? 'Current' : cb + 'mo behind'}), Score: ${c.score}`;
+    }).join('<br>')}
+    ${s.behind.length > 5 ? '<br>...and ' + (s.behind.length - 5) + ' more behind clients' : ''}`;
   }
 
-  if (ql.includes('karina') && (ql.includes('workload') || ql.includes('client') || ql.includes('allocation'))) {
-    return `<strong>Karina Maharjan's Workload:</strong><br><br>
-    📋 <strong>16 clients</strong> | Avg ICP Score: <strong>71</strong><br><br>
-    <strong>Current (Feb 2026):</strong> Jordan Street Homes, FootHill Legacy Holdings (2 clients)<br>
-    <strong>1 Behind (Jan 2026):</strong> Horizon STR, L.B Capital, Nolan & Associates, Della Investments, The Bone Family (5 clients)<br>
-    <strong>2+ Behind:</strong> 9 clients, including Suite Dreams and Biofuse Wellness (7 months behind each)<br><br>
-    Only 12.5% of her book is current. She's carrying a heavy load with several complex, behind clients. Worth discussing whether to redistribute some of the furthest-behind ones.`;
+  // ── Detect: who is overdue / behind ──
+  if (ql.includes('overdue') || ql.includes('behind') || ql.includes('worst') || ql.includes('most behind') || ql.includes('furthest')) {
+    const sorted = [...CLIENT_DATA].sort((a,b) => monthsBehind(b.latestMonth) - monthsBehind(a.latestMonth));
+    const worst = sorted.filter(c => monthsBehind(c.latestMonth) >= 2).slice(0, 8);
+    return `<strong>Clients Furthest Behind on Close:</strong><br><br>
+    ${worst.map(c => {
+      const cb = monthsBehind(c.latestMonth);
+      return `🔴 <strong>${c.client}</strong> (${c.preparer}) — ${fmtMonth(c.latestMonth)}, ${cb} months behind, Score: ${c.score}`;
+    }).join('<br>')}<br><br>
+    That's <strong>${CLIENT_DATA.filter(c => monthsBehind(c.latestMonth) >= 2).length} total clients</strong> that are 2+ months behind. The biggest bottleneck is ${sorted[0].client} at ${monthsBehind(sorted[0].latestMonth)} months behind.`;
   }
 
-  if (ql.includes('matt') && (ql.includes('workload') || ql.includes('client'))) {
-    return `<strong>Matt Larkin's Workload:</strong><br><br>
-    📋 <strong>17 clients</strong> | Avg ICP Score: <strong>62</strong> (lowest on team)<br><br>
-    Matt has the most clients and the lowest average score. His book includes Black Rock Construction (14 months behind, Score: 48) and Duame Big (12 months behind, Score: 50). These low-score, far-behind clients are dragging down his metrics significantly.`;
+  // ── Detect: team comparison / balance / scores ──
+  if (ql.includes('score') || ql.includes('balance') || ql.includes('imbalance') || ql.includes('compare') || ql.includes('team') || ql.includes('allocation')) {
+    const staff = ['Charlie Reynolds','Ona Phago','Karina Maharjan','Matt Larkin'].map(n => getStaffData(n)).filter(Boolean);
+    staff.sort((a,b) => b.avgScore - a.avgScore);
+    const spread = staff[0].avgScore - staff[staff.length-1].avgScore;
+
+    return `<strong>Team Comparison:</strong><br><br>
+    ${staff.map(s => {
+      const currentPct = Math.round((s.current.length / s.clients.length) * 100);
+      const icon = s.avgScore >= 80 ? '🏆' : s.avgScore >= 65 ? '📊' : '⚠️';
+      return `${icon} <strong>${s.name}</strong>: ${s.clients.length} clients, avg score <strong>${s.avgScore}</strong>, ${currentPct}% current, ${s.behind.length} behind`;
+    }).join('<br>')}<br><br>
+    ${spread >= 20 ? '⚠️ There\'s a <strong>' + spread + '-point spread</strong> in average scores. ' + staff[staff.length-1].name + ' has the heaviest and lowest-scoring book. Consider rebalancing.' : '✅ Scores are fairly balanced across the team.'}`;
   }
 
-  if (ql.includes('ona') && (ql.includes('workload') || ql.includes('client'))) {
-    return `<strong>Ona Phago's Workload:</strong><br><br>
-    📋 <strong>16 clients</strong> | Avg ICP Score: <strong>68</strong><br><br>
-    <strong>Current:</strong> Tech Bird Consultants (96), Bone Collective (85), CRE Creative (82), Morales Investment (83), Pine Creek (81) — 5 clients ✅<br>
-    <strong>Most Behind:</strong> Chad Rockwell LTR (8 mo), Finding Dory (8 mo)<br><br>
-    Ona has a solid current rate at ~31%, but those two far-behind clients need attention.`;
+  // ── Detect: priorities / this week / focus / action items ──
+  if (ql.includes('priority') || ql.includes('priorities') || ql.includes('this week') || ql.includes('focus') || ql.includes('action') || ql.includes('should') || ql.includes('todo') || ql.includes('to do') || ql.includes('what needs')) {
+    const overdueClassify = CLIENT_DATA.filter(c => classifyDaysLeft(c) <= 0);
+    const urgentClassify = CLIENT_DATA.filter(c => { const d = classifyDaysLeft(c); return d > 0 && d <= 3; });
+    const wayBehind = CLIENT_DATA.filter(c => monthsBehind(c.latestMonth) >= 6).sort((a,b) => monthsBehind(b.latestMonth) - monthsBehind(a.latestMonth));
+    const highScoreBehind = CLIENT_DATA.filter(c => c.score >= 80 && monthsBehind(c.latestMonth) >= 2);
+
+    return `<strong>Top Priorities Right Now:</strong><br><br>
+    ${overdueClassify.length > 0 ? '1. 🔴 <strong>' + overdueClassify.length + ' clients overdue on Classify Transactions</strong> — ' + overdueClassify.slice(0,3).map(c=>c.client).join(', ') + (overdueClassify.length > 3 ? ', +' + (overdueClassify.length-3) + ' more' : '') + '<br><br>' : ''}
+    ${urgentClassify.length > 0 ? '2. ⚠️ <strong>' + urgentClassify.length + ' clients due within 3 days</strong> for classify — ' + urgentClassify.slice(0,3).map(c=>c.client).join(', ') + '<br><br>' : ''}
+    ${wayBehind.length > 0 ? '3. 🔴 <strong>' + wayBehind.length + ' clients 6+ months behind on close</strong> — ' + wayBehind.slice(0,3).map(c => c.client + ' (' + monthsBehind(c.latestMonth) + 'mo)').join(', ') + '<br><br>' : ''}
+    ${highScoreBehind.length > 0 ? '4. 🎯 <strong>' + highScoreBehind.length + ' high-value clients (score 80+) are behind</strong> — ' + highScoreBehind.slice(0,3).map(c => c.client + ' (Score:' + c.score + ')').join(', ') + ' — these should be prioritized<br><br>' : ''}
+    5. 📊 <strong>Workload rebalancing</strong> — Matt Larkin has the most clients (${getStaffData('Matt Larkin').clients.length}) with the lowest avg score (${getStaffData('Matt Larkin').avgScore}). Consider redistributing.`;
   }
 
-  if (ql.includes('score') || ql.includes('balance') || ql.includes('imbalance')) {
-    return `<strong>Team Score Comparison:</strong><br><br>
-    🏆 Charlie Reynolds: <strong>92 avg</strong> (6 clients)<br>
-    📊 Karina Maharjan: <strong>71 avg</strong> (16 clients)<br>
-    📊 Ona Phago: <strong>68 avg</strong> (16 clients)<br>
-    📊 Matt Larkin: <strong>62 avg</strong> (17 clients)<br><br>
-    There's a 30-point spread between the highest and lowest. Matt is carrying the most clients AND the lowest-scoring ones — that's a double hit. Consider moving 1-2 higher-score clients from Karina or Ona to Matt, and redistributing some of his lower-score clients.`;
+  // ── Detect: current / up to date / good shape ──
+  if (ql.includes('current') || ql.includes('up to date') || ql.includes('good shape') || ql.includes('on track') || ql.includes('doing well')) {
+    const current = CLIENT_DATA.filter(c => monthsBehind(c.latestMonth) <= 0).sort((a,b) => b.score - a.score);
+    return `<strong>${current.length} Clients Fully Current:</strong><br><br>
+    ${current.map(c => `✅ <strong>${c.client}</strong> (${c.preparer}) — Score: ${c.score}`).join('<br>')}<br><br>
+    That's <strong>${Math.round((current.length / CLIENT_DATA.length) * 100)}%</strong> of the firm. Goal is to get everyone here.`;
   }
 
-  if (ql.includes('priority') || ql.includes('this week') || ql.includes('focus')) {
-    return `<strong>Top Priorities This Week:</strong><br><br>
-    1. 🔴 <strong>5 clients overdue on Classify Transactions</strong> — These need immediate attention to stay compliant with the 2-week rule<br>
-    2. 🔴 <strong>Black Rock Construction</strong> — 14 months behind on close, assign a catch-up sprint<br>
-    3. ⚠️ <strong>Carenostics Inc</strong> (Charlie's client) — 85% close progress on Nov 2025, push to finish<br>
-    4. 📊 <strong>Matt Larkin overloaded</strong> — 17 clients, lowest avg score, consider rebalancing<br>
-    5. 🏷️ <strong>3 clients in "Urgent" for transaction classification</strong> — due within 3 days`;
+  // ── Detect: classify transactions status ──
+  if (ql.includes('classif') || ql.includes('transaction') || ql.includes('categoriz')) {
+    const overdue = CLIENT_DATA.filter(c => classifyDaysLeft(c) <= 0);
+    const urgent = CLIENT_DATA.filter(c => { const d = classifyDaysLeft(c); return d > 0 && d <= 3; });
+    const dueSoon = CLIENT_DATA.filter(c => { const d = classifyDaysLeft(c); return d > 3 && d <= 7; });
+    const onTrack = CLIENT_DATA.filter(c => classifyDaysLeft(c) > 7);
+
+    return `<strong>Classify Transactions Status:</strong><br><br>
+    ✅ <strong>${onTrack.length}</strong> On Track (8+ days left)<br>
+    🟡 <strong>${dueSoon.length}</strong> Due Soon (4-7 days)<br>
+    🟠 <strong>${urgent.length}</strong> Urgent (1-3 days)<br>
+    🔴 <strong>${overdue.length}</strong> Overdue<br><br>
+    ${overdue.length > 0 ? '<strong>Overdue clients:</strong><br>' + overdue.sort((a,b) => classifyDaysLeft(a) - classifyDaysLeft(b)).map(c => '🔴 ' + c.client + ' (' + c.preparer + ') — ' + Math.abs(classifyDaysLeft(c)) + ' days overdue').join('<br>') : '✅ No clients are overdue — great compliance!'}`;
   }
 
-  // Default
-  return `I can answer questions about your clients, team workloads, close statuses, and scores. Try asking things like:<br><br>
-  • "What are [person]'s largest projects?"<br>
-  • "Who has the most overdue closes?"<br>
-  • "Show me [person]'s workload"<br>
-  • "Are the team scores balanced?"<br>
-  • "What should we focus on this week?"<br><br>
-  <em>Note: I'm running on mock data right now. Once Cameron connects the Double API, I'll have real-time answers.</em>`;
+  // ── Detect: summary / overview / how are we doing ──
+  if (ql.includes('summary') || ql.includes('overview') || ql.includes('how are we') || ql.includes('firm') || ql.includes('overall') || ql.includes('status')) {
+    const current = CLIENT_DATA.filter(c => monthsBehind(c.latestMonth) <= 0).length;
+    const oneBehind = CLIENT_DATA.filter(c => monthsBehind(c.latestMonth) === 1).length;
+    const twoPlusBehind = CLIENT_DATA.filter(c => monthsBehind(c.latestMonth) >= 2).length;
+    const avgScore = Math.round(CLIENT_DATA.reduce((s,c) => s + c.score, 0) / CLIENT_DATA.length);
+    const overdueClassify = CLIENT_DATA.filter(c => classifyDaysLeft(c) <= 0).length;
+
+    return `<strong>Firm Overview — March 15, 2026:</strong><br><br>
+    📊 <strong>${CLIENT_DATA.length} total clients</strong><br><br>
+    <strong>Monthly Close:</strong><br>
+    ✅ ${current} current | 🟡 ${oneBehind} one behind | 🔴 ${twoPlusBehind} two+ behind<br><br>
+    <strong>Classify Transactions:</strong><br>
+    🔴 ${overdueClassify} overdue on classification<br><br>
+    <strong>Team:</strong><br>
+    Avg ICP Score: <strong>${avgScore}</strong> | ${Math.round((current/CLIENT_DATA.length)*100)}% of clients fully current<br><br>
+    ${twoPlusBehind > current ? '⚠️ More clients are 2+ behind than current — the firm needs to prioritize catch-up.' : '👍 More clients are current than critically behind — keep pushing.'}`;
+  }
+
+  // ── Detect: specific staff name mentioned without clear intent — show portfolio ──
+  if (staffName) {
+    const s = getStaffData(staffName);
+    if (s) {
+      const currentPct = Math.round((s.current.length / s.clients.length) * 100);
+      return `<strong>${s.name}</strong> manages <strong>${s.clients.length} clients</strong> with an average ICP score of <strong>${s.avgScore}</strong>. ${currentPct}% of their book is current, and ${s.behind.length} clients are 2+ months behind.<br><br>Want more detail? Try asking "What are ${s.name.split(' ')[0]}'s biggest projects?" or "Show me ${s.name.split(' ')[0]}'s workload."`;
+    }
+  }
+
+  // ── Default ──
+  return `I can answer questions about your ${CLIENT_DATA.length} clients and team. Try things like:<br><br>
+  • "How are we doing overall?"<br>
+  • "What are Charlie's biggest projects?"<br>
+  • "Who is most behind on close?"<br>
+  • "Show me Karina's workload"<br>
+  • "What should we focus on this week?"<br>
+  • "What's the classify transactions status?"<br>
+  • "Tell me about [client name]"<br>
+  • "Are the team scores balanced?"<br><br>
+  <em>Running on mock data — Cameron can wire this to Double's API + Claude for real-time answers.</em>`;
 }
 </script>
 </body>
